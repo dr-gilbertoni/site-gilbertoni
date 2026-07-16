@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leitura de Artigo | Clínica Gilbertoni</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        /* Estilização para o texto do artigo ficar perfeito */
+        .article-body p { margin-bottom: 1.25rem; font-size: 1rem; color: #475569; line-height: 1.75; }
+        .article-body h2 { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-top: 2rem; margin-bottom: 1rem; }
+        .article-body h3 { font-size: 1.25rem; font-weight: 600; color: #0f172a; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .article-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.25rem; color: #475569; }
+        .article-body li { margin-bottom: 0.5rem; }
+        .article-body strong { color: #0f172a; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-white border-b border-slate-100 py-5 px-6 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <a href="blog.html" class="text-sky-900 hover:text-emerald-500 font-bold text-sm transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Voltar para o Blog
+            </a>
+            <a href="index.html" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-2 rounded-lg transition-all text-xs">
+                Fazer Diagnóstico Grátis
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto py-12 px-6">
+        <div id="loading" class="text-center py-12">
+            <i class="fa-solid fa-spinner animate-spin text-4xl text-sky-900"></i>
+        </div>
+
+        <article id="article-area" class="bg-white rounded-2xl p-6 md:p-12 shadow-md border border-slate-100 hidden">
+            <div class="flex items-center gap-3 text-xs font-semibold text-slate-400 mb-4 uppercase">
+                <span id="post-category" class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full">Geral</span>
+                <span id="post-date">16/07/2026</span>
+            </div>
+
+            <h1 id="post-title" class="text-3xl md:text-4xl lg:text-5xl font-extrabold text-sky-950 leading-tight mb-6">Título do Post</h1>
+            
+            <div id="post-image-container" class="mb-8 rounded-2xl overflow-hidden h-64 md:h-96 hidden">
+                <img id="post-image" src="" alt="Capa" class="w-full h-full object-cover">
+            </div>
+
+            <hr class="border-slate-100 mb-8">
+
+            <div id="post-body" class="article-body"></div>
+            
+            <div class="mt-12 p-8 bg-gradient-to-br from-sky-950 to-sky-900 text-white rounded-2xl border border-white/5 relative overflow-hidden shadow-xl text-center">
+                <h4 class="text-2xl font-bold mb-2">Sua empresa está 100% protegida contra multas de SST?</h4>
+                <p class="text-sky-200 text-sm max-w-xl mx-auto mb-6">Não corra riscos desnecessários com o eSocial. Solicite um diagnóstico gratuito das obrigações da sua empresa com nossos técnicos especializados.</p>
+                <a href="index.html#form-registro" class="inline-block bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-6 py-3.5 rounded-lg text-sm transition-all shadow-lg shadow-emerald-500/20">
+                    Falar com um Consultor de SST
+                </a>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        // Obtém o nome do post na URL (?post=nome-do-post)
+        const urlParams = new URLSearchParams(window.location.search);
+        const postSlug = urlParams.get('post');
+
+        async function loadArticle() {
+            if (!postSlug) {
+                window.location.href = 'blog.html';
+                return;
+            }
+
+            try {
+                // Lê o arquivo .md correspondente da pasta local /posts/
+                const res = await fetch(`posts/${postSlug}.md`);
+                if (!res.ok) throw new Error('Artigo não encontrado localmente');
+                const text = await res.text();
+
+                // Analisa YAML do artigo
+                const parsed = parseMarkdownWithFrontmatter(text);
+                
+                // Popula o conteúdo
+                document.getElementById('post-title').innerText = parsed.attributes.title || 'Sem Título';
+                document.getElementById('post-category').innerText = parsed.attributes.category || 'Geral';
+                
+                if (parsed.attributes.date) {
+                    const dateObj = new Date(parsed.attributes.date);
+                    document.getElementById('post-date').innerText = dateObj.toLocaleDateString('pt-BR');
+                }
+
+                if (parsed.attributes.image) {
+                    document.getElementById('post-image').src = parsed.attributes.image;
+                    document.getElementById('post-image-container').classList.remove('hidden');
+                }
+
+                // Renderiza o markdown do artigo para HTML estruturado
+                document.getElementById('post-body').innerHTML = marked.parse(parsed.body);
+
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('article-area').classList.remove('hidden');
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('loading').innerHTML = `<p class="text-rose-500 font-bold">Erro ao abrir o artigo selecionado.</p><a href="blog.html" class="text-sky-900 font-semibold text-sm underline mt-2 block">Voltar para o blog</a>`;
+            }
+        }
+
+        // Função para quebrar e extrair metadados e o corpo de texto
+        function parseMarkdownWithFrontmatter(text) {
+            const temp = { attributes: {}, body: text };
+            const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+            if (match) {
+                const rawYaml = match[1];
+                temp.body = match[2];
+                rawYaml.split('\n').forEach(line => {
+                    const idx = line.indexOf(':');
+                    if (idx > -1) {
+                        const key = line.substring(0, idx).trim();
+                        const val = line.substring(idx + 1).trim().replace(/^["']|["']$/g, '');
+                        temp.attributes[key] = val;
+                    }
+                });
+            }
+            return temp;
+        }
+
+        window.onload = loadArticle;
+    </script>
+</body>
+</html>

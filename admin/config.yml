@@ -1,0 +1,21 @@
+backend:
+  name: github
+  repo: SEU_USUARIO_DO_GITHUB/NOME_DO_REPOSITORIO # Ajuste aqui!
+  branch: main
+
+media_folder: "images/uploads" # Onde as fotos dos artigos serão salvas
+public_folder: "/images/uploads"
+
+collections:
+  - name: "posts"
+    label: "Artigos"
+    folder: "posts" # Onde os textos serão salvos
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "Título do Artigo", name: "title", widget: "string"}
+      - {label: "Data de Publicação", name: "date", widget: "datetime"}
+      - {label: "Categoria", name: "category", widget: "select", options: ["eSocial & Legislação", "Segurança do Trabalho", "Medicina do Trabalho"]}
+      - {label: "Resumo do Artigo (Para o Grid)", name: "summary", widget: "text"}
+      - {label: "Imagem de Capa (URL ou Upload)", name: "image", widget: "image", required: false}
+      - {label: "Corpo do Texto", name: "body", widget: "markdown"} # Editor estilo Word rico em recursos
