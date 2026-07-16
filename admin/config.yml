@@ -3,7 +3,7 @@ backend:
   repo: dr-gilbertoni/site-gilbertoni # Ajuste aqui!
   branch: main
 
-media_folder: "images/uploads" # Onde as fotos dos artigos serão salvas
+media_folder: "images / uploads" # Onde as fotos dos artigos serão salvas
 public_folder: "/images/uploads"
 
 collections:
