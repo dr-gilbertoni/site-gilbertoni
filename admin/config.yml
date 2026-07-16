@@ -1,6 +1,6 @@
 backend:
   name: github
-  repo: SEU_USUARIO_DO_GITHUB/NOME_DO_REPOSITORIO # Ajuste aqui!
+  repo: dr-gilbertoni/site-gilbertoni # Ajuste aqui!
   branch: main
 
 media_folder: "images/uploads" # Onde as fotos dos artigos serão salvas
