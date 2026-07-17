@@ -385,12 +385,27 @@
         }
     </script>
 
-    <script>
+  <script>
         async function fetchBlogPosts() {
             const container = document.getElementById('blog-posts-container');
             const owner = 'dr-gilbertoni';
             const repo = 'site-gilbertoni';
             const folderPath = 'posts'; // Pasta onde o Decap CMS salva os arquivos .md
+
+            // Configuração de Cache Inteligente (Evita lentidão e bloqueios da API do GitHub)
+            const cacheKey = 'blog_posts_cache';
+            const cacheTimeKey = 'blog_posts_cache_time';
+            const cacheDuration = 10 * 60 * 1000; // Guarda os posts por 10 minutos no navegador do usuário
+
+            const cachedData = localStorage.getItem(cacheKey);
+            const cachedTime = localStorage.getItem(cacheTimeKey);
+            const now = Date.now();
+
+            // Se o cache existir e ainda for recente, exibe os posts INSTANTANEAMENTE
+            if (cachedData && cachedTime && (now - cachedTime < cacheDuration)) {
+                container.innerHTML = cachedData;
+                return;
+            }
 
             try {
                 // 1. Consulta o GitHub API buscando os arquivos contidos na pasta de posts
@@ -399,17 +414,18 @@
                 
                 const files = await response.json();
                 
-                // Filtra apenas os arquivos que são Markdown (.md)
-                const mdFiles = files.filter(file => file.name.endsWith('.md'));
+                // Filtra apenas os arquivos Markdown (.md) e ordena de forma DECRESCENTE (mais recentes primeiro)
+                const mdFiles = files
+                    .filter(file => file.name.endsWith('.md'))
+                    .sort((a, b) => b.name.localeCompare(a.name));
 
                 if (mdFiles.length === 0) {
                     container.innerHTML = `<p class="col-span-full text-center text-slate-500 text-sm py-6">Nenhum artigo publicado no blog ainda.</p>`;
                     return;
                 }
 
-                container.innerHTML = ''; // Limpa o loader de carregamento inicial
-
-                // Pegamos no máximo os 3 artigos mais recentes para a vitrine principal
+                let htmlContent = '';
+                // Pegamos os 3 artigos mais recentes para a vitrine principal
                 const postsToShow = mdFiles.slice(0, 3);
 
                 // 2. Loop para extrair as meta-informações estruturadas de cada post
@@ -418,9 +434,15 @@
                     const fileResponse = await fetch(file.download_url);
                     const rawMarkdown = await fileResponse.text();
 
-                    // Regex inteligente para isolar o Front Matter (cabeçalho) do artigo
-                    const frontMatterMatch = rawMarkdown.match(/^---([\s\S]*?)---/);
-                    let title = postName.replace(/-/g, ' ');
+                    // Regex para isolar o Front Matter (cabeçalho) do artigo tirando espaços invisíveis
+                    const frontMatterMatch = rawMarkdown.trim().match(/^---([\s\S]*?)---/);
+                    
+                    // Fallback amigável caso falte o título no arquivo (remove a data do nome se houver)
+                    let cleanName = postName;
+                    if (/^\d{4}-\d{2}-\d{2}-/.test(cleanName)) {
+                        cleanName = cleanName.substring(11);
+                    }
+                    let title = cleanName.replace(/-/g, ' ');
                     let summary = "Clique no botão abaixo para ler o artigo completo.";
                     let image = '';
                     let category = 'Geral';
@@ -433,19 +455,19 @@
                             if (index > -1) {
                                 const key = line.substring(0, index).trim();
                                 let value = line.substring(index + 1).trim();
-                                value = value.replace(/^['"]|['"]$/g, ''); // Remove aspas
+                                value = value.replace(/^['"]|['"]$/g, ''); // Remove aspas extras
                                 metadata[key] = value;
                             }
                         });
 
-                        // Carrega os dados obtidos com tratamento padrão (fallback)
+                        // Carrega os dados exatos do seu config.yml do Decap CMS
                         title = metadata.title || title;
-                        summary = metadata.summary || summary; // "summary" é o campo exato configurado no config.yml!
+                        summary = metadata.summary || summary; 
                         image = metadata.image || '';
                         category = metadata.category || category;
                     }
 
-                    // 3. Renderiza o card do post no grid dinamicamente
+                    // 3. Renderiza o card mantendo o seu design 100% fiel
                     const postCard = `
                         <article class="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full group">
                             <div class="h-48 bg-slate-200 relative overflow-hidden flex items-center justify-center">
@@ -465,12 +487,23 @@
                             </div>
                         </article>
                     `;
-                    container.innerHTML += postCard;
+                    htmlContent += postCard;
                 }
 
+                container.innerHTML = htmlContent;
+
+                // Salva o resultado final renderizado no cache local
+                localStorage.setItem(cacheKey, htmlContent);
+                localStorage.setItem(cacheTimeKey, now.toString());
+
             } catch (err) {
-                console.error(err);
-                container.innerHTML = `<p class="col-span-full text-center text-red-500 text-xs py-6">Não foi possível exibir os artigos mais recentes do blog.</p>`;
+                console.error("Erro ao carregar o blog do GitHub:", err);
+                // Se a API do GitHub falhar ou der rate limit, usamos o cache antigo de segurança (mesmo expirado)
+                if (cachedData) {
+                    container.innerHTML = cachedData;
+                } else {
+                    container.innerHTML = `<p class="col-span-full text-center text-red-500 text-xs py-6">Não foi possível carregar os artigos do blog neste momento.</p>`;
+                }
             }
         }
 
