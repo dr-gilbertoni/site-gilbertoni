@@ -385,27 +385,12 @@
         }
     </script>
 
-  <script>
+<script>
         async function fetchBlogPosts() {
             const container = document.getElementById('blog-posts-container');
             const owner = 'dr-gilbertoni';
             const repo = 'site-gilbertoni';
             const folderPath = 'posts'; // Pasta onde o Decap CMS salva os arquivos .md
-
-            // Configuração de Cache Inteligente (Evita lentidão e bloqueios da API do GitHub)
-            const cacheKey = 'blog_posts_cache';
-            const cacheTimeKey = 'blog_posts_cache_time';
-            const cacheDuration = 10 * 60 * 1000; // Guarda os posts por 10 minutos no navegador do usuário
-
-            const cachedData = localStorage.getItem(cacheKey);
-            const cachedTime = localStorage.getItem(cacheTimeKey);
-            const now = Date.now();
-
-            // Se o cache existir e ainda for recente, exibe os posts INSTANTANEAMENTE
-            if (cachedData && cachedTime && (now - cachedTime < cacheDuration)) {
-                container.innerHTML = cachedData;
-                return;
-            }
 
             try {
                 // 1. Consulta o GitHub API buscando os arquivos contidos na pasta de posts
@@ -415,6 +400,7 @@
                 const files = await response.json();
                 
                 // Filtra apenas os arquivos Markdown (.md) e ordena de forma DECRESCENTE (mais recentes primeiro)
+                // Isso resolve o bug: novos posts criados no Decap CMS sempre aparecerão no início da vitrine!
                 const mdFiles = files
                     .filter(file => file.name.endsWith('.md'))
                     .sort((a, b) => b.name.localeCompare(a.name));
@@ -424,9 +410,9 @@
                     return;
                 }
 
-                let htmlContent = '';
-                // Pegamos os 3 artigos mais recentes para a vitrine principal
+                // Pegamos no máximo os 3 artigos mais recentes para a vitrine principal
                 const postsToShow = mdFiles.slice(0, 3);
+                let htmlContent = '';
 
                 // 2. Loop para extrair as meta-informações estruturadas de cada post
                 for (const file of postsToShow) {
@@ -434,10 +420,9 @@
                     const fileResponse = await fetch(file.download_url);
                     const rawMarkdown = await fileResponse.text();
 
-                    // Regex para isolar o Front Matter (cabeçalho) do artigo tirando espaços invisíveis
+                    // Regex seguro para isolar o Front Matter (cabeçalho) do artigo tirando espaços invisíveis
                     const frontMatterMatch = rawMarkdown.trim().match(/^---([\s\S]*?)---/);
                     
-                    // Fallback amigável caso falte o título no arquivo (remove a data do nome se houver)
                     let cleanName = postName;
                     if (/^\d{4}-\d{2}-\d{2}-/.test(cleanName)) {
                         cleanName = cleanName.substring(11);
@@ -460,14 +445,14 @@
                             }
                         });
 
-                        // Carrega os dados exatos do seu config.yml do Decap CMS
+                        // Carrega os dados obtidos com tratamento padrão (fallback)
                         title = metadata.title || title;
                         summary = metadata.summary || summary; 
                         image = metadata.image || '';
                         category = metadata.category || category;
                     }
 
-                    // 3. Renderiza o card mantendo o seu design 100% fiel
+                    // 3. Renderiza o card do post mantendo o seu design original 100% elegante e fiel
                     const postCard = `
                         <article class="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full group">
                             <div class="h-48 bg-slate-200 relative overflow-hidden flex items-center justify-center">
@@ -490,20 +475,12 @@
                     htmlContent += postCard;
                 }
 
+                // Insere todos os posts de uma única vez para evitar que o layout pisque ou quebre
                 container.innerHTML = htmlContent;
 
-                // Salva o resultado final renderizado no cache local
-                localStorage.setItem(cacheKey, htmlContent);
-                localStorage.setItem(cacheTimeKey, now.toString());
-
             } catch (err) {
-                console.error("Erro ao carregar o blog do GitHub:", err);
-                // Se a API do GitHub falhar ou der rate limit, usamos o cache antigo de segurança (mesmo expirado)
-                if (cachedData) {
-                    container.innerHTML = cachedData;
-                } else {
-                    container.innerHTML = `<p class="col-span-full text-center text-red-500 text-xs py-6">Não foi possível carregar os artigos do blog neste momento.</p>`;
-                }
+                console.error("Erro ao carregar os posts do blog:", err);
+                container.innerHTML = `<p class="col-span-full text-center text-red-500 text-xs py-6">Não foi possível exibir os artigos mais recentes do blog.</p>`;
             }
         }
 
